@@ -1,3 +1,4 @@
+// catalog-server.js - Commit 1
 const express = require('express');
 const fs = require('fs');
 const csv = require('csv-parser');
@@ -5,7 +6,6 @@ const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const app = express();
 const PORT = 3001;
-
 let catalog = [];
 
 fs.createReadStream('./proj.csv')
@@ -23,22 +23,20 @@ fs.createReadStream('./proj.csv')
 app.use(express.json());
 
 app.get('/search/:topic', (req, res) => {
-  const topic = req.params.topic;
-  const result = catalog.filter(book => book.topic.toLowerCase() === topic.toLowerCase());
-  result.length > 0 ? res.json(result) : res.status(404).send('No books found for this topic');
+    const topic = req.params.topic.toLowerCase();
+    const result = catalog.filter(book => book.topic.toLowerCase() === topic);
+    result.length > 0 ? res.json(result) : res.status(404).send('No books found');
 });
 
 app.get('/info/:item_number', (req, res) => {
-  const itemNumber = parseInt(req.params.item_number);
-  const book = catalog.find(book => book.id === itemNumber);
-  book ? res.json(book) : res.status(404).send('Book not found');
+    const itemId = parseInt(req.params.item_number);
+    const book = catalog.find(book => book.id === itemId);
+    book ? res.json(book) : res.status(404).send('Book not found');
 });
-
 
 app.put('/update', (req, res) => {
     const { id, stock, price } = req.body;
-    
-    const book = catalog.find(book => book.id === id);
+    const book = catalog.find(b => b.id === id);
 
     if (book) {
         if (stock !== undefined) book.stock = stock;
@@ -52,19 +50,16 @@ app.put('/update', (req, res) => {
                 { id: 'author', title: 'author' },
                 { id: 'topic', title: 'topic' },
                 { id: 'price', title: 'price' },
-                { id: 'stock', title: 'stock' }
+                { id: 'stock', title: 'stock' },
             ]
         });
 
-        csvWriter.writeRecords(catalog) 
+        csvWriter.writeRecords(catalog)
             .then(() => {
-                console.log('CSV file updated successfully');
-                res.json(book);  
+                console.log('CSV updated');
+                res.json(book);
             })
-            .catch((error) => {
-                console.error('Error writing CSV file:', error);
-                res.status(500).send('Error updating CSV file');
-            });
+            .catch(() => res.status(500).send('Error updating CSV'));
     } else {
         res.status(404).send('Book not found');
     }
