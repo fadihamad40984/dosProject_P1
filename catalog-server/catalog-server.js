@@ -1,11 +1,13 @@
+// catalog-server.js - Commit 3 (Final)
 const express = require('express');
 const fs = require('fs');
 const csv = require('csv-parser');
 const { stringify } = require('csv-stringify/sync');
+const axios = require('axios');
 
 const app = express();
-const PORT = 3001;
 const csvFilePath = './proj.csv';
+const port = process.env.PORT || 3001;
 app.use(express.json());
 
 function readCatalog() {
@@ -20,7 +22,7 @@ function readCatalog() {
                 catalog.push(data);
             })
             .on('end', () => resolve(catalog))
-            .on('error', reject);
+            .on('error', (error) => reject(error));
     });
 }
 
@@ -29,24 +31,36 @@ function saveCatalog(catalog) {
     fs.writeFileSync(csvFilePath, csvData, 'utf8');
 }
 
+async function notifyFrontend(itemId) {
+    try {
+        await axios.post('http://localhost:3000/invalidate', { itemId });
+    } catch (error) {
+        console.error('Cache invalidation failed', error);
+    }
+}
+
+app.get('/info/:item_number', async (req, res) => {
+    try {
+        const itemNumber = parseInt(req.params.item_number);
+        const catalog = await readCatalog();
+        const book = catalog.find(book => book.id === itemNumber);
+        book ? res.json(book) : res.status(404).send('Book not found');
+    } catch (error) {
+        res.status(500).send('Error reading catalog');
+    }
+});
+
+app.get('/status', async (req, res) => {
+    res.send("RUN");
+});
+
 app.get('/search/:topic', async (req, res) => {
     try {
         const topic = req.params.topic.toLowerCase();
         const catalog = await readCatalog();
         const result = catalog.filter(book => book.topic.toLowerCase() === topic);
-        result.length > 0 ? res.json(result) : res.status(404).send('No books found');
-    } catch (err) {
-        res.status(500).send('Error reading catalog');
-    }
-});
-
-app.get('/info/:item_number', async (req, res) => {
-    try {
-        const id = parseInt(req.params.item_number);
-        const catalog = await readCatalog();
-        const book = catalog.find(b => b.id === id);
-        book ? res.json(book) : res.status(404).send('Book not found');
-    } catch {
+        result.length > 0 ? res.json(result) : res.status(404).send('No books found for this topic');
+    } catch (error) {
         res.status(500).send('Error reading catalog');
     }
 });
@@ -55,22 +69,21 @@ app.put('/update', async (req, res) => {
     try {
         const { id, stock, price } = req.body;
         const catalog = await readCatalog();
-        const book = catalog.find(b => b.id === id);
-
+        const book = catalog.find(book => book.id === id);
         if (book) {
             if (stock !== undefined) book.stock = stock;
             if (price !== undefined) book.price = price;
-
             saveCatalog(catalog);
+            notifyFrontend(id);
             res.json(book);
         } else {
             res.status(404).send('Book not found');
         }
-    } catch {
+    } catch (error) {
         res.status(500).send('Error updating catalog');
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Catalog server running on port ${PORT}`);
+app.listen(port, () => {
+    console.log(`Catalog server started on port ${port}`);
 });
