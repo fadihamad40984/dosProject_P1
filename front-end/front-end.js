@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const app = express();
+const cache = new Map();
 app.use(express.json());
 
 const catalogServers = ['http://localhost:3001', 'http://localhost:3003'];
@@ -26,22 +27,30 @@ async function getNextServer(servers) {
 
 app.get('/search/:topic', async (req, res) => {
     const topic = req.params.topic;
-    try {
-        const response = await axios.get(`${await getNextServer(catalogServers)}/search/${topic}`);
-        res.json(response.data);
-    } catch (error) {
-        res.status(500).send('Error fetching data from catalog service');
+    if (cache.has(topic)) {
+        const cached = cache.get(topic);
+        if (cached.expiry > Date.now()) {
+            return res.json({ source: 'cache', data: cached.data });
+        }
     }
+    const server = await getNextServer(catalogServers);
+    const response = await axios.get(`${server}/search/${topic}`);
+    cache.set(topic, { data: response.data, expiry: Date.now() + 30000 });
+    res.json(response.data);
 });
 
 app.get('/info/:item_number', async (req, res) => {
     const itemNumber = req.params.item_number;
-    try {
-        const response = await axios.get(`${await getNextServer(catalogServers)}/info/${itemNumber}`);
-        res.json(response.data);
-    } catch (error) {
-        res.status(500).send('Error fetching data from catalog service');
+    if (cache.has(itemNumber)) {
+        const cached = cache.get(itemNumber);
+        if (cached.expiry > Date.now()) {
+            return res.json({ source: 'cache', data: cached.data });
+        }
     }
+    const server = await getNextServer(catalogServers);
+    const response = await axios.get(`${server}/info/${itemNumber}`);
+    cache.set(itemNumber, { data: response.data, expiry: Date.now() + 30000 });
+    res.json(response.data);
 });
 
 app.post('/purchase/:item_number', async (req, res) => {
