@@ -4,8 +4,8 @@ const csvParser = require('csv-parser');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const app = express();
-const orderFile = './orders.csv';
-const bookFile = './proj.csv';
+const orderFile = '../orders.csv';
+const bookFile = '../proj.csv';
 
 app.use(express.json());
 
@@ -79,11 +79,19 @@ app.post('/purchase/:item_number', async (req, res) => {
         await writeBooks(books);
         res.json({ message: `Book purchased successfully: ${book.title}`, order });
     } catch (error) {
-        console.error(error);
         res.status(500).send('Error processing purchase');
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Order service running on port ${PORT}`);
+app.get('/status', async (req, res) => {
+    try {
+        res.send("RUN");
+    } catch (error) {
+        res.status(404).send('notfound');
+    }
+});
+
+const port = process.env.PORT || 3002;
+app.listen(port, () => {
+    console.log(`Order server started on port ${port}`);
 });
