@@ -1,49 +1,58 @@
 const express = require('express');
 const axios = require('axios');
-
 const app = express();
 app.use(express.json());
 
+const catalogServers = ['http://localhost:3001', 'http://localhost:3003'];
+const orderServers = ['http://localhost:3002', 'http://localhost:3004'];
 
-app.get('/search', async (req, res) => {
-    const topic = req.query.topic;
+async function isServerAvailable(server) {
     try {
-        const response = await axios.get(`http://localhost:3001/search/${topic}`);
+        await axios.get(`${server}/status`);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function getNextServer(servers) {
+    for (let index = 0; index < servers.length; index++) {
+        const server = servers[index];
+        if (await isServerAvailable(server)) {
+            return server;
+        }
+    }
+}
+
+app.get('/search/:topic', async (req, res) => {
+    const topic = req.params.topic;
+    try {
+        const response = await axios.get(`${await getNextServer(catalogServers)}/search/${topic}`);
         res.json(response.data);
     } catch (error) {
-        res.status(500).send('Error fetching books by topic');
+        res.status(500).send('Error fetching data from catalog service');
     }
-}); 
-
-
-
+});
 
 app.get('/info/:item_number', async (req, res) => {
     const itemNumber = req.params.item_number;
     try {
-        const response = await axios.get(`http://localhost:3001/info/${itemNumber}`);
+        const response = await axios.get(`${await getNextServer(catalogServers)}/info/${itemNumber}`);
         res.json(response.data);
     } catch (error) {
-        res.status(500).send('Error fetching book information');
+        res.status(500).send('Error fetching data from catalog service');
     }
 });
 
 app.post('/purchase/:item_number', async (req, res) => {
     const itemNumber = req.params.item_number;
-    const { title, quantity } = req.body; 
-
-    if (!quantity || quantity <= 0) {
-        return res.status(400).json({ error: "Quantity must be greater than 0" });
-    }
-
+    const { title, quantity } = req.body;
     try {
-        const response = await axios.post(`http://order-server:3002/purchase/${itemNumber}`, { title, quantity });
+        const response = await axios.post(`${await getNextServer(orderServers)}/purchase/${itemNumber}`, { title, quantity });
         res.json(response.data);
     } catch (error) {
         res.status(500).send('Error processing purchase');
     }
 });
 
-app.listen(3000, () => {
-    console.log(`Front-end service successfully started on port 3000`);
-});
+app.listen(8080, () => console.log('Frontend server running on port 8080'));
