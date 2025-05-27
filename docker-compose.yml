@@ -1,24 +1,75 @@
 version: '3.8'
 
 services:
-  catalog-server:
+  catalog-server-1:
     build:
       context: ./catalog-server
     ports:
       - "3001:3001"
     volumes:
-      - ./catalog-server/proj.csv:/usr/src/app/proj.csv
+      - ./proj.csv:/usr/src/proj.csv
+    environment:
+      - PORT=3001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  order-server:
+  catalog-server-2:
+    build:
+      context: ./catalog-server
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./proj.csv:/usr/src/proj.csv
+    environment:
+      - PORT=3003
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  order-server-1:
     build:
       context: ./order-server
     ports:
       - "3002:3002"
-    volumes:
-      - ./order-server/proj.csv:/usr/src/app/proj.csv
+    environment:
+      - PORT=3002
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  order-server-2:
+    build:
+      context: ./order-server
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   front-end:
     build:
       context: ./front-end
     ports:
       - "3000:3000"
+    depends_on:
+      catalog-server-1:
+        condition: service_healthy
+      catalog-server-2:
+        condition: service_healthy
+      order-server-1:
+        condition: service_healthy
+      order-server-2:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production

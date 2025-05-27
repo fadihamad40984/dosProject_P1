@@ -1,4 +1,3 @@
-// catalog-server.js - Commit 3 (Final)
 const express = require('express');
 const fs = require('fs');
 const csv = require('csv-parser');
@@ -6,7 +5,7 @@ const { stringify } = require('csv-stringify/sync');
 const axios = require('axios');
 
 const app = express();
-const csvFilePath = './proj.csv';
+const csvFilePath = '../proj.csv';
 const port = process.env.PORT || 3001;
 app.use(express.json());
 
@@ -38,7 +37,6 @@ async function notifyFrontend(itemId) {
         console.error('Cache invalidation failed', error);
     }
 }
-
 app.get('/info/:item_number', async (req, res) => {
     try {
         const itemNumber = parseInt(req.params.item_number);
@@ -49,11 +47,15 @@ app.get('/info/:item_number', async (req, res) => {
         res.status(500).send('Error reading catalog');
     }
 });
-
 app.get('/status', async (req, res) => {
-    res.send("RUN");
+    try {
+  res.send(
+    "RUN"
+  )
+    } catch (error) {
+        res.status(404).send('notfound');
+    }
 });
-
 app.get('/search/:topic', async (req, res) => {
     try {
         const topic = req.params.topic.toLowerCase();
