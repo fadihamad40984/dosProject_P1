@@ -4,7 +4,6 @@ const csvParser = require('csv-parser');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const app = express();
-const PORT = 3002;
 const orderFile = './orders.csv';
 const bookFile = './proj.csv';
 
@@ -52,6 +51,39 @@ function logOrder(order) {
     return csvWriter.writeRecords([order]);
 }
 
+app.post('/purchase/:item_number', async (req, res) => {
+    const itemNumber = req.params.item_number;
+    const purchaseAmount = parseInt(req.body.amount, 10);
+    if (!purchaseAmount || purchaseAmount <= 0) {
+        return res.status(400).send('Invalid purchase amount.');
+    }
+    try {
+        const books = await readBooks();
+        const bookIndex = books.findIndex(book => book.id === itemNumber);
+        if (bookIndex === -1) {
+            return res.status(404).send('Book ID not found.');
+        }
+        const book = books[bookIndex];
+        const currentStock = parseInt(book.stock, 10);
+        if (purchaseAmount > currentStock) {
+            return res.status(400).send(`Insufficient stock. Available stock: ${currentStock}`);
+        }
+        books[bookIndex].stock = (currentStock - purchaseAmount).toString();
+        const order = {
+            order_id: Date.now().toString(),
+            item_id: itemNumber,
+            title: book.title,
+            quantity: purchaseAmount,
+        };
+        await logOrder(order);
+        await writeBooks(books);
+        res.json({ message: `Book purchased successfully: ${book.title}`, order });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error processing purchase');
+    }
+});
+
 app.listen(PORT, () => {
-    console.log(Order service running on port ${PORT});
+    console.log(`Order service running on port ${PORT}`);
 });
