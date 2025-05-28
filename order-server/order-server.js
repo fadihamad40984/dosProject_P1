@@ -9,6 +9,20 @@ const bookFile = '../proj.csv';
 
 app.use(express.json());
 
+function logOrder(order) {
+    const csvWriter = createCsvWriter({
+        path: orderFile,
+        header: [
+            { id: 'order_id', title: 'order_id' },
+            { id: 'item_id', title: 'item_id' },
+            { id: 'title', title: 'title' },
+            { id: 'quantity', title: 'quantity' },
+        ],
+        append: true,
+    });
+    return csvWriter.writeRecords([order]);
+}
+
 function readBooks() {
     return new Promise((resolve, reject) => {
         const books = [];
@@ -35,20 +49,6 @@ function writeBooks(books) {
         ],
     });
     return csvWriter.writeRecords(books);
-}
-
-function logOrder(order) {
-    const csvWriter = createCsvWriter({
-        path: orderFile,
-        header: [
-            { id: 'order_id', title: 'order_id' },
-            { id: 'item_id', title: 'item_id' },
-            { id: 'title', title: 'title' },
-            { id: 'quantity', title: 'quantity' },
-        ],
-        append: true,
-    });
-    return csvWriter.writeRecords([order]);
 }
 
 app.post('/purchase/:item_number', async (req, res) => {
@@ -82,16 +82,17 @@ app.post('/purchase/:item_number', async (req, res) => {
         res.status(500).send('Error processing purchase');
     }
 });
-
 app.get('/status', async (req, res) => {
     try {
-        res.send("RUN");
+  res.send(
+    "RUN"
+  )
     } catch (error) {
         res.status(404).send('notfound');
     }
 });
-
 const port = process.env.PORT || 3002;
 app.listen(port, () => {
     console.log(`Order server started on port ${port}`);
 });
+

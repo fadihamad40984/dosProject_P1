@@ -10,12 +10,13 @@
   "dependencies": {
     "axios": "^1.7.7",
     "body-parser": "^1.20.3",
-    "catalog-service": "file:",
     "csv-parser": "^3.0.0",
+    "csv-stringify": "^6.4.5",
     "csv-writer": "^1.6.0",
-    "express": "^4.21.2"
+    "express": "^4.21.1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC"
 }
+
